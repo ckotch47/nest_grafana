@@ -1,0 +1,100 @@
+version: "3.9"
+configs:
+  postgres_exporter_config:
+    file: ./queries.yaml
+
+services:
+  postgres:
+    image: postgres:13.3
+    container_name: db_test
+    environment:
+      POSTGRES_DB: test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+    ports:
+      - 5433:5432
+    networks:
+      example-network:
+        ipv4_address: 172.16.238.16
+
+  postgres-exporter-pgserver94:
+    image: wrouesnel/postgres_exporter:latest
+    configs:
+      - source: postgres_exporter_config
+        target: /etc/postgres_exporter/queries.yaml
+    deploy:
+      mode: replicated
+      replicas: 1
+    ports:
+      - 9187:9187
+    environment:
+      - DATA_SOURCE_NAME=postgresql://test:test@172.16.238.16:5432/postgres?sslmode=disable
+      - PG_EXPORTER_EXTEND_QUERY_PATH=/etc/postgres_exporter/queries.yaml
+    networks:
+      example-network:
+        ipv4_address: 172.16.238.20
+
+  nest_app:
+    image: node:18
+    container_name: nest_app
+    external_links:
+      - db_test:db_test
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: "node"
+    working_dir: /usr/src/app
+    volumes:
+      - .:/usr/src/app
+      - /usr/app/node_modules
+    ports:
+      - 3030:3030
+    command: "npm start"
+    networks:
+      example-network:
+        ipv4_address: 172.16.238.17
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    container_name: prometheus_nest
+    external_links:
+      - grafana:grafana
+    ports:
+      - 9091:9090
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    networks:
+      example-network:
+        ipv4_address: 172.16.238.18
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    user: "472"
+    container_name: grafana_nest
+    external_links:
+      - prometheus:prometheus
+    depends_on:
+      - prometheus
+    ports:
+      - 3031:3000
+    volumes:
+      - ./datasource.yml:/etc/grafana/provisioning/datasource.yml
+    env_file:
+      - ./config.monitoring
+    networks:
+      example-network:
+        ipv4_address: 172.16.238.19
+
+
+networks:
+  example-network:
+    name: example-network
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/24

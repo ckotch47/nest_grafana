@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: "nest_app"
+
+rule_files:
+
+scrape_configs:
+  - job_name: "prometheus"
+
+    static_configs:
+      - targets: ["172.16.23.18:9090", "localhost:9090", "localhost:9091" ,"172.16.23.17:3030", "172.16.238.20:9187"]
+
+  - job_name: "nest_app"
+    dns_sd_configs:
+      - names: ["nest_app"]
+        port: 3030
+        type: A
+        refresh_interval: 5s
