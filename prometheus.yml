@@ -7,14 +7,20 @@ global:
 rule_files:
 
 scrape_configs:
-  - job_name: "prometheus"
-
+  - job_name: "prod"
+    metrics_path: /api/metrics
     static_configs:
-      - targets: ["172.16.23.18:9090", "localhost:9090", "localhost:9091" ,"172.16.23.17:3030", "172.16.238.20:9187"]
+      - targets: ["api.school-sotvorchestvo.ru"]
+
+  - job_name: "dev"
+    metrics_path: /api/metrics
+    static_configs:
+      - targets: ["45.12.72.204:8081"]
 
   - job_name: "nest_app"
+    metrics_path: /api/metrics
     dns_sd_configs:
       - names: ["nest_app"]
-        port: 3030
+        port: 8081
         type: A
         refresh_interval: 5s
