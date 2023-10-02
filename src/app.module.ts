@@ -1,4 +1,4 @@
-import {Module, NestModule} from '@nestjs/common';
+import {MiddlewareConsumer, Module, NestModule} from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import {StatiModule} from "./stati/stati.module";
@@ -6,7 +6,7 @@ import {TypeOrmModule} from "@nestjs/typeorm";
 import {StatiController} from "./stati/controller/stati.controller";
 import {StatiService} from "./stati/services/stati.service";
 import {StatiEntity} from "./stati/entity/stati.entity";
-import {makeCounterProvider, PrometheusModule} from "@willsoto/nestjs-prometheus";
+import {makeHistogramProvider, makeCounterProvider, PrometheusModule} from "@willsoto/nestjs-prometheus";
 import {ApiMetricsMiddleware} from "./api.metrics.middleware";
 import {collectDefaultMetrics} from "prom-client";
 @Module({
@@ -34,62 +34,75 @@ import {collectDefaultMetrics} from "prom-client";
     ],
   controllers: [AppController],
   providers: [AppService,
-    makeCounterProvider(
+    makeHistogramProvider(
         {
           name:'http_request_duration_milliseconds',
           help:'http_request_duration_milliseconds_help',
+          labelNames: ['method', 'route', 'code'],
         },
     ),
-    makeCounterProvider(
+    makeHistogramProvider(
         {
           name:'http_request_size_bytes',
           help:'http_request_size_bytes_help',
+          labelNames: ['method', 'route', 'code'],
         },
     ),
-    makeCounterProvider(
+    makeHistogramProvider(
         {
           name:'http_response_size_bytes',
           help:'http_response_size_bytes_help',
+          labelNames: ['method', 'route', 'code'],
         },
     ),
     makeCounterProvider(
         {
           name:'http_all_request_total',
           help:'http_all_request_total_help',
+          labelNames: ['method', 'route', 'code'],
         },
     ),
     makeCounterProvider(
         {
           name:'http_all_success_total',
           help:'http_all_success_total_help',
+          labelNames: ['method', 'route', 'code'],
         },
     ),
     makeCounterProvider(
         {
           name:'http_all_errors_total',
           help:'http_all_errors_total_help',
+          labelNames: ['method', 'route', 'code'],
         },
     ),
     makeCounterProvider(
         {
           name:'http_all_client_error_total',
           help:'http_all_client_error_total_help',
+          labelNames: ['method', 'route', 'code'],
         },
     ),
     makeCounterProvider(
         {
           name:'http_all_server_error_total',
           help:'http_all_server_error_total_help',
+          labelNames: ['method', 'route', 'code'],
         },
     ),
     makeCounterProvider(
         {
           name:'http_request_total',
           help:'http_request_total_help',
+          labelNames: ['method', 'route', 'code'],
         },
     ),
 
       ApiMetricsMiddleware,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(ApiMetricsMiddleware).forRoutes('*');
+  }
+}
